@@ -3,8 +3,10 @@ __pycache__/
 .venv/
 venv/
 temp/
-models/
-*.pt
+# Whisper model weights only — do NOT exclude the whole models/ dir;
+# it contains the schemas.py Pydantic package.
+models/*.pt
+models/*.bin
 .env
 google-credentials.json
 .pytest_cache/
