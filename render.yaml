@@ -1,0 +1,60 @@
+# Render Blueprint — deploys both backend and frontend.
+# Docs: https://render.com/docs/blueprint-spec
+services:
+  # ─── Backend API (Docker, ships with FFmpeg) ───
+  - type: web
+    name: audio-transcriber-api
+    runtime: docker
+    plan: starter
+    region: oregon
+    rootDir: backend
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /api/health
+    envVars:
+      - key: FRONTEND_ORIGIN
+        fromService:
+          name: audio-transcriber-web
+          type: web
+          property: hostport
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GOOGLE_APPLICATION_CREDENTIALS
+        sync: false
+      - key: DEFAULT_WHISPER_MODEL
+        value: base
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "500"
+      - key: MAX_CONCURRENT_CHUNKS
+        value: "1"
+      - key: TEMP_DIR
+        value: /tmp/audio-transcriber
+      - key: WHISPER_CACHE_DIR
+        value: /opt/render/project/models
+
+  # ─── Frontend (static React build) ───
+  - type: web
+    name: audio-transcriber-web
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        fromService:
+          name: audio-transcriber-api
+          type: web
+          property: host
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable

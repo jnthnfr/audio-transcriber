@@ -1,0 +1,45 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+*.egg
+dist/
+build/
+.eggs/
+
+# Model weights + temp job files
+**/temp/
+/models/
+*.pt
+*.bin
+
+# Env / secrets
+.env
+.env.local
+.env.*.local
+google-credentials.json
+*.pem
+*.key
+
+# Node
+frontend/node_modules/
+frontend/dist/
+frontend/.vite/
+
+# Netlify
+.netlify/
+
+# Editor / OS
+.DS_Store
+Thumbs.db
+*.log
+.idea/
+.vscode/
+
+# Claude
+.claude/
+CLAUDE.md
+*.claude

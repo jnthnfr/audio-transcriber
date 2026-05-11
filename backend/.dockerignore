@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+temp/
+models/
+*.pt
+.env
+google-credentials.json
+.pytest_cache/
