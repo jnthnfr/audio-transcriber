@@ -76,27 +76,53 @@ Copy `.env.example` to `.env` in the project root and fill in:
 | GET | `/api/result/{job_id}` | Get completed transcript |
 | DELETE | `/api/job/{job_id}` | Clean up temp files |
 
-## Deploying to Render
+## Deployment (free)
 
-A `render.yaml` Blueprint at the repo root deploys both services from a single commit.
+Two pieces, two hosts:
 
-1. Push this repo to GitHub.
-2. In the Render dashboard, **New → Blueprint** and select the repo. Render reads `render.yaml` and creates:
-   - **audio-transcriber-api** — Docker web service (Python + FFmpeg + Whisper). Health-checked at `/api/health`.
-   - **audio-transcriber-web** — Static site (Vite build). Routes are rewritten to `index.html` for SPA support.
-3. Set sync-disabled env vars on the API service:
-   - `OPENAI_API_KEY` (only if using the OpenAI backend)
-   - `GOOGLE_APPLICATION_CREDENTIALS` (only if using Google Cloud STT — paste the JSON path or use Render Secret Files)
-4. Render automatically wires `VITE_API_BASE_URL` on the frontend to the backend's URL, and `FRONTEND_ORIGIN` on the backend to the frontend's URL (so CORS works out of the box).
+| Piece | Host | Cost |
+|-------|------|------|
+| Backend (FastAPI + FFmpeg) | Hugging Face Spaces (Docker SDK) | Free |
+| Frontend (static React build) | Render Static Site | Free |
 
-The free Render plan sleeps idle services. The first request after a sleep period will time out while the container cold-starts; the Whisper backend additionally needs to download the model on first use, so consider a paid plan for production.
+### Backend → Hugging Face Space
+
+The `backend/` directory is a self-contained HF Space. The frontmatter in `backend/README.md` tells HF to build the Docker image.
+
+```bash
+# One-time setup
+# 1. Create a Space at https://huggingface.co/new-space
+#    - Owner: your HF username
+#    - Space name: audio-transcriber
+#    - SDK: Docker
+#    - Hardware: CPU basic (free)
+
+# 2. Push the backend folder to the Space:
+git subtree push --prefix=backend https://huggingface.co/spaces/<your-username>/audio-transcriber main
+```
+
+After the first push, the Space builds and exposes the API at `https://<your-username>-audio-transcriber.hf.space`.
+
+Set secrets in the Space's **Settings → Variables and secrets**:
+- `OPENAI_API_KEY` — if using the OpenAI backend
+- `FRONTEND_ORIGIN` — your Render frontend URL (e.g. `https://audio-transcriber-web.onrender.com`)
+
+> Note: the free CPU plan runs local Whisper at ~10x realtime. For production loads use the OpenAI API backend or upgrade the Space hardware.
+
+### Frontend → Render Static Site
+
+`render.yaml` deploys the frontend as a free static site.
+
+1. In the Render dashboard, **New → Blueprint** and select this repo.
+2. On the deployed service, set the env var `VITE_API_BASE_URL` to your HF Space URL (`https://<your-username>-audio-transcriber.hf.space`).
+3. Render rebuilds with the URL baked in.
 
 ### Local Docker test (optional)
 
 ```powershell
 cd backend
 docker build -t audio-transcriber-api .
-docker run --rm -p 8000:8000 -e FRONTEND_ORIGIN=http://localhost:5173 audio-transcriber-api
+docker run --rm -p 7860:7860 -e FRONTEND_ORIGIN=http://localhost:5173 audio-transcriber-api
 ```
 
 ## Project Structure
