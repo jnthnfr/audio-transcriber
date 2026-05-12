@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     temp_dir: str = "./backend/temp"
     max_concurrent_chunks: int = 1
     frontend_origin: str = "http://localhost:5173"
+    hf_token: str = ""
+    diarization_model: str = "pyannote/speaker-diarization-3.1"
 
 
 settings = Settings()

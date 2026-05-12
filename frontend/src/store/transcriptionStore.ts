@@ -17,10 +17,12 @@ interface TranscriptionState {
   chunkDuration: number
   language: string
   whisperModel: WhisperModel
+  diarize: boolean
   setBackend: (b: TranscriptionBackend) => void
   setChunkDuration: (d: number) => void
   setLanguage: (l: string) => void
   setWhisperModel: (m: WhisperModel) => void
+  setDiarize: (d: boolean) => void
 
   // Job lifecycle
   jobId: string | null
@@ -38,6 +40,7 @@ interface TranscriptionState {
   durationSeconds: number
   resultBackend: string
   resultModel: string | null
+  resultDiarized: boolean
 
   // Health
   health: HealthResponse | null
@@ -59,6 +62,7 @@ interface TranscriptionState {
     duration: number,
     backend: string,
     model: string | null,
+    diarized: boolean,
   ) => void
   setUploadProgress: (pct: number) => void
   setTranscript: (t: string) => void
@@ -80,6 +84,7 @@ const jobDefaults = {
   durationSeconds: 0,
   resultBackend: '',
   resultModel: null,
+  resultDiarized: false,
 }
 
 const defaults = {
@@ -88,6 +93,7 @@ const defaults = {
   chunkDuration: 60,
   language: 'auto',
   whisperModel: 'base' as WhisperModel,
+  diarize: false,
   jobId: null,
   status: null,
   completedChunks: 0,
@@ -101,6 +107,7 @@ const defaults = {
   durationSeconds: 0,
   resultBackend: '',
   resultModel: null,
+  resultDiarized: false,
   health: null,
 }
 
@@ -112,6 +119,7 @@ export const useTranscriptionStore = create<TranscriptionState>((set) => ({
   setChunkDuration: (chunkDuration) => set({ chunkDuration }),
   setLanguage: (language) => set({ language }),
   setWhisperModel: (whisperModel) => set({ whisperModel }),
+  setDiarize: (diarize) => set({ diarize }),
   setHealth: (health) => set({ health }),
   setJobId: (jobId) => set({ jobId }),
   setUploadProgress: (uploadProgress) => set({ uploadProgress }),
@@ -120,8 +128,8 @@ export const useTranscriptionStore = create<TranscriptionState>((set) => ({
   setJobStatus: (status, completedChunks, totalChunks, progressPercent, currentChunkLabel, errorMessage) =>
     set({ status, completedChunks, totalChunks, progressPercent, currentChunkLabel, errorMessage }),
 
-  setResult: (transcript, chunks, durationSeconds, resultBackend, resultModel) =>
-    set({ transcript, chunks, durationSeconds, resultBackend, resultModel }),
+  setResult: (transcript, chunks, durationSeconds, resultBackend, resultModel, resultDiarized) =>
+    set({ transcript, chunks, durationSeconds, resultBackend, resultModel, resultDiarized }),
 
   resetJob: () => set({ ...jobDefaults }),
   reset: () => set({ ...defaults }),

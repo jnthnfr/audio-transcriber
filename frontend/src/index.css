@@ -348,6 +348,31 @@ body {
 }
 .config-select:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.diarize-toggle {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border);
+  background: var(--surface2);
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+.diarize-toggle:hover:not(:has(input:disabled)) {
+  border-color: var(--accent);
+}
+.diarize-toggle input[type="checkbox"] {
+  margin-top: 3px;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.diarize-toggle input[type="checkbox"]:disabled { cursor: not-allowed; }
+.diarize-toggle:has(input:disabled) { opacity: 0.55; cursor: not-allowed; }
+.diarize-text { display: flex; flex-direction: column; gap: 2px; }
+.diarize-name { font-size: 0.88rem; font-weight: 600; color: var(--text); }
+.diarize-desc { font-size: 0.72rem; color: var(--text-sec); }
+
 /* ===== ACTION ROW ===== */
 .action-row {
   display: flex;

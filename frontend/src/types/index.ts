@@ -15,6 +15,7 @@ export interface HealthResponse {
   whisper_api: boolean
   google_cloud: boolean
   web_speech: boolean
+  diarization: boolean
 }
 
 export interface TranscribeResponse {
@@ -39,6 +40,7 @@ export interface ChunkResult {
   text: string
   start_seconds: number
   end_seconds: number
+  speaker: string | null
 }
 
 export interface ResultResponse {
@@ -49,6 +51,7 @@ export interface ResultResponse {
   duration_seconds: number
   backend: string
   model: string | null
+  diarized: boolean
 }
 
 export interface TranscriptionConfig {
@@ -56,4 +59,5 @@ export interface TranscriptionConfig {
   chunkDuration: number
   language: string
   whisperModel: WhisperModel
+  diarize: boolean
 }
