@@ -50,10 +50,13 @@ export function ConfigPanel() {
     chunkDuration, setChunkDuration,
     language, setLanguage,
     whisperModel, setWhisperModel,
+    diarize, setDiarize,
     health, status,
   } = useTranscriptionStore()
 
   const isDisabled = status === 'processing' || status === 'queued'
+  const diarizationAvailable = health?.diarization ?? false
+  const diarizationSupportedForBackend = backend !== 'web_speech'
 
   return (
     <div className="config-panel">
@@ -133,6 +136,34 @@ export function ConfigPanel() {
           </div>
         )}
       </div>
+
+      {/* Speaker detection */}
+      {diarizationSupportedForBackend && (
+        <div className="config-section">
+          <label className="diarize-toggle" title={
+            !diarizationAvailable
+              ? 'Unavailable — set HF_TOKEN on the backend and accept the pyannote license'
+              : 'Detect and label distinct speakers (adds ~0.5x audio length on CPU)'
+          }>
+            <input
+              id="diarize-checkbox"
+              type="checkbox"
+              checked={diarize && diarizationAvailable}
+              onChange={(e) => setDiarize(e.target.checked)}
+              disabled={isDisabled || !diarizationAvailable}
+            />
+            <div className="diarize-text">
+              <span className="diarize-name">
+                Detect speakers
+                {!diarizationAvailable && <span className="backend-badge" style={{ position: 'static', marginLeft: 8 }}>Unavailable</span>}
+              </span>
+              <span className="diarize-desc">
+                Run speaker diarization and prefix each segment with a speaker label.
+              </span>
+            </div>
+          </label>
+        </div>
+      )}
     </div>
   )
 }

@@ -45,6 +45,7 @@ def _new_job(job_id: str, total_chunks: int, backend: str, model: Optional[str])
         "duration_seconds": 0.0,
         "backend": backend,
         "model": model,
+        "diarized": False,
     }
 
 
@@ -132,6 +133,34 @@ def _concurrency_for(backend: str) -> int:
     return max(1, settings.max_concurrent_chunks)
 
 
+async def _apply_diarization(job_id: str, file_path: str) -> None:
+    """Run pyannote on the full file and tag each chunk with its dominant speaker.
+
+    Failures are non-fatal: the job still finishes with diarized=False.
+    """
+    from services import diarization_service
+
+    await _update_job(job_id, current_chunk_label="detecting speakers…")
+    turns = await asyncio.to_thread(diarization_service.diarize, file_path)
+
+    async with _jobs_lock:
+        job = _jobs.get(job_id)
+        if not job:
+            return
+        for c in job["chunks"]:
+            speaker = diarization_service.dominant_speaker(
+                turns, c["start_seconds"], c["end_seconds"],
+            )
+            if speaker:
+                c["speaker"] = speaker
+        ordered = sorted(job["chunks"], key=lambda c: c["index"])
+        job["transcript"] = "\n\n".join(
+            (f"{c['speaker']}: {c['text']}" if c.get("speaker") and c["text"] else c["text"])
+            for c in ordered if c["text"]
+        )
+        job["diarized"] = True
+
+
 async def _run_job(
     job_id: str,
     file_path: str,
@@ -141,6 +170,7 @@ async def _run_job(
     language: str,
     whisper_model: str,
     duration_seconds: float,
+    diarize: bool,
 ):
     try:
         await _update_job(
@@ -165,6 +195,15 @@ async def _run_job(
             ]
         )
 
+        if diarize:
+            try:
+                await _apply_diarization(job_id, file_path)
+            except Exception as e:
+                await _update_job(
+                    job_id,
+                    error_message=f"Diarization skipped: {e}",
+                )
+
         await _update_job(job_id, status=JobStatus.done, current_chunk_label=None)
 
     except Exception as e:
@@ -181,6 +220,7 @@ async def transcribe(
     chunk_duration: int = Form(60),
     language: str = Form("auto"),
     whisper_model: str = Form("base"),
+    diarize: bool = Form(False),
 ):
     if backend == TranscriptionBackend.web_speech:
         raise HTTPException(
@@ -190,6 +230,14 @@ async def transcribe(
 
     if not check_ffmpeg():
         raise HTTPException(status_code=500, detail="ffmpeg/ffprobe not found on PATH")
+
+    if diarize:
+        from services import diarization_service
+        if not diarization_service.is_available():
+            raise HTTPException(
+                status_code=400,
+                detail="Speaker detection unavailable: set HF_TOKEN and accept the pyannote model license.",
+            )
 
     max_bytes = settings.max_upload_size_mb * 1024 * 1024
     job_id = str(uuid.uuid4())
@@ -232,7 +280,7 @@ async def transcribe(
         _run_job,
         job_id, file_path, chunk_dir,
         backend, chunk_duration, language, whisper_model,
-        duration,
+        duration, diarize,
     )
 
     return TranscribeResponse(
@@ -282,6 +330,7 @@ async def get_result(job_id: str):
         duration_seconds=job["duration_seconds"],
         backend=job["backend"],
         model=job["model"],
+        diarized=job.get("diarized", False),
     )
 
 

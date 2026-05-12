@@ -27,6 +27,7 @@ export const startTranscription = async (
   chunkDuration: number,
   language: string,
   whisperModel: WhisperModel,
+  diarize: boolean,
   onUploadProgress?: (pct: number) => void,
 ): Promise<TranscribeResponse> => {
   const form = new FormData()
@@ -35,6 +36,7 @@ export const startTranscription = async (
   form.append('chunk_duration', String(chunkDuration))
   form.append('language', language)
   form.append('whisper_model', whisperModel)
+  form.append('diarize', String(diarize))
 
   const { data } = await api.post<TranscribeResponse>('/transcribe', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
