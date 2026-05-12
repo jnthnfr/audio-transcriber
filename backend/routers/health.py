@@ -31,6 +31,11 @@ def _check_google_cloud() -> bool:
     return bool(creds) and Path(creds).is_file()
 
 
+def _check_diarization() -> bool:
+    from services import diarization_service
+    return diarization_service.is_available()
+
+
 @router.get("/health", response_model=HealthResponse)
 async def health():
     return HealthResponse(
@@ -40,4 +45,5 @@ async def health():
         whisper_api=_check_whisper_api(),
         google_cloud=_check_google_cloud(),
         web_speech=True,  # Browser-side; always reported as available
+        diarization=_check_diarization(),
     )

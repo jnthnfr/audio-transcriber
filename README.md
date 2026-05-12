@@ -56,6 +56,8 @@ Copy `.env.example` to `.env` in the project root and fill in:
 | `DEFAULT_WHISPER_MODEL` | `tiny` / `base` / `small` / `medium` / `large` |
 | `MAX_UPLOAD_SIZE_MB` | Max upload size in megabytes |
 | `TEMP_DIR` | Directory for temporary job files |
+| `HF_TOKEN` | Hugging Face token for speaker diarization (pyannote) |
+| `DIARIZATION_MODEL` | Diarization model id (default `pyannote/speaker-diarization-3.1`) |
 
 ## Transcription Backends
 
@@ -65,6 +67,26 @@ Copy `.env.example` to `.env` in the project root and fill in:
 | **OpenAI API** | Requires `OPENAI_API_KEY`, 25MB/file limit (handled by chunking) |
 | **Google Cloud STT** | Requires `GOOGLE_APPLICATION_CREDENTIALS` JSON |
 | **Web Speech** | Experimental — Chrome only, files < 2 min |
+
+## Speaker Detection (diarization)
+
+Toggle **Detect speakers** in the UI to label each segment with a speaker id
+(`SPEAKER_00`, `SPEAKER_01`, …). Diarization runs once on the full source
+file via `pyannote.audio` after transcription completes, then assigns each
+chunk's dominant speaker.
+
+Setup (one-time):
+
+1. Create a free Hugging Face token at https://huggingface.co/settings/tokens
+2. Accept the model license at https://huggingface.co/pyannote/speaker-diarization-3.1
+3. Set `HF_TOKEN=hf_...` in `backend/.env` (or HF Space / Render secrets)
+
+Notes:
+
+- Works with any transcription backend except Web Speech.
+- CPU runtime adds ~0.5x the audio length to the job. GPU is much faster.
+- On Render the free/Starter tier (512MB RAM) will OOM under PyTorch. Use the
+  Standard plan (2GB) or stay on HF Spaces free CPU basic (16GB).
 
 ## API Endpoints
 

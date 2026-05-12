@@ -7,9 +7,13 @@ function formatDuration(seconds: number): string {
 }
 
 export function TranscriptViewer() {
-  const { transcript, status, durationSeconds, resultBackend, resultModel, setTranscript } = useTranscriptionStore()
+  const { transcript, status, durationSeconds, resultBackend, resultModel, resultDiarized, chunks, setTranscript } = useTranscriptionStore()
 
   if (!transcript && status !== 'processing') return null
+
+  const speakerCount = resultDiarized
+    ? new Set(chunks.map((c) => c.speaker).filter(Boolean)).size
+    : 0
 
   return (
     <div className="transcript-viewer">
@@ -23,6 +27,9 @@ export function TranscriptViewer() {
                resultBackend === 'whisper_api' ? 'OpenAI API' :
                resultBackend === 'google_cloud' ? 'Google Cloud STT' : 'Web Speech'}
             </span>
+            {speakerCount > 0 && (
+              <span className="meta-chip">{speakerCount} speaker{speakerCount === 1 ? '' : 's'}</span>
+            )}
           </div>
         )}
       </div>

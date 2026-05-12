@@ -9,3 +9,4 @@ pydub==0.25.1
 ffmpeg-python==0.2.0
 python-dotenv==1.0.0
 aiofiles==23.2.1
+pyannote.audio==3.3.2
