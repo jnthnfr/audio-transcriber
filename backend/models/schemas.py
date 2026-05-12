@@ -47,6 +47,7 @@ class ChunkResult(BaseModel):
     text: str
     start_seconds: float
     end_seconds: float
+    speaker: Optional[str] = None
 
 
 class ResultResponse(BaseModel):
@@ -57,6 +58,7 @@ class ResultResponse(BaseModel):
     duration_seconds: float
     backend: str
     model: Optional[str] = None
+    diarized: bool = False
 
 
 class HealthResponse(BaseModel):
@@ -66,3 +68,4 @@ class HealthResponse(BaseModel):
     whisper_api: bool
     google_cloud: bool
     web_speech: bool
+    diarization: bool = False

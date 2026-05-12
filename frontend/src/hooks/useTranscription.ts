@@ -19,6 +19,7 @@ export function useTranscription() {
         s.chunkDuration,
         s.language,
         s.whisperModel,
+        s.diarize,
         (pct) => useTranscriptionStore.getState().setUploadProgress(pct),
       )
       const next = useTranscriptionStore.getState()
