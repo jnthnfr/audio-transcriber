@@ -62,9 +62,20 @@ async def _append_chunk(job_id: str, chunk: ChunkResult) -> None:
             return
         job["chunks"].append(chunk.model_dump())
         job["completed_chunks"] = len(job["chunks"])
-        # Reassemble transcript in chunk-index order (chunks may complete out of order)
-        ordered = sorted(job["chunks"], key=lambda c: c["index"])
-        job["transcript"] = "\n\n".join(c["text"] for c in ordered if c["text"])
+        job["transcript"] = _assemble_transcript(job["chunks"])
+
+
+def _assemble_transcript(chunks: list[dict]) -> str:
+    """Join chunks in index order into one transcript, prefixing each with its speaker if known."""
+    ordered = sorted(chunks, key=lambda c: c["index"])
+    parts: list[str] = []
+    for c in ordered:
+        text = c.get("text")
+        if not text:
+            continue
+        speaker = c.get("speaker")
+        parts.append(f"{speaker}: {text}" if speaker else text)
+    return "\n\n".join(parts)
 
 
 # ----- Transcription dispatch -----
@@ -134,9 +145,11 @@ def _concurrency_for(backend: str) -> int:
 
 
 async def _apply_diarization(job_id: str, file_path: str) -> None:
-    """Run pyannote on the full file and tag each chunk with its dominant speaker.
+    """Run diarization on the full source file and tag each chunk with its dominant speaker.
 
-    Failures are non-fatal: the job still finishes with diarized=False.
+    The diarize call itself is offloaded to a thread (it's CPU-heavy and blocks the
+    event loop otherwise). Speaker assignment + transcript reassembly run inside
+    the job lock so they're atomic with respect to concurrent status reads.
     """
     from services import diarization_service
 
@@ -153,11 +166,7 @@ async def _apply_diarization(job_id: str, file_path: str) -> None:
             )
             if speaker:
                 c["speaker"] = speaker
-        ordered = sorted(job["chunks"], key=lambda c: c["index"])
-        job["transcript"] = "\n\n".join(
-            (f"{c['speaker']}: {c['text']}" if c.get("speaker") and c["text"] else c["text"])
-            for c in ordered if c["text"]
-        )
+        job["transcript"] = _assemble_transcript(job["chunks"])
         job["diarized"] = True
 
 
