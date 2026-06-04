@@ -70,10 +70,21 @@ Copy `.env.example` to `.env` in the project root and fill in:
 
 ## Speaker Detection (diarization)
 
-Toggle **Detect speakers** in the UI to label each segment with a speaker id
-(`SPEAKER_00`, `SPEAKER_01`, …). Diarization runs once on the full source
-file via `pyannote.audio` after transcription completes, then assigns each
-chunk's dominant speaker.
+Toggle **Detect speakers** in the UI to label each segment with a speaker
+name (`Speaker 1`, `Speaker 2`, …). Diarization runs once on the full
+source file via `pyannote.audio` after transcription completes, assigns
+each chunk's dominant speaker, then formats the transcript as dialogue —
+consecutive turns by the same speaker are grouped under a single prefix.
+
+Example output:
+
+```
+Speaker 1: Good morning. How are you?
+
+Speaker 2: I'm fine, thanks. Anyway, let's begin.
+
+Speaker 1: Sounds good.
+```
 
 Setup (one-time):
 

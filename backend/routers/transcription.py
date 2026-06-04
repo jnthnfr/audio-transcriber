@@ -66,16 +66,43 @@ async def _append_chunk(job_id: str, chunk: ChunkResult) -> None:
 
 
 def _assemble_transcript(chunks: list[dict]) -> str:
-    """Join chunks in index order into one transcript, prefixing each with its speaker if known."""
+    """Join chunks in index order into one transcript.
+
+    Speaker formatting (when chunks carry pyannote labels):
+      - Raw ids (SPEAKER_00, SPEAKER_01, …) are remapped to human-friendly
+        "Speaker 1", "Speaker 2", … in first-appearance order.
+      - Consecutive chunks attributed to the same speaker collapse into a
+        single block under one prefix so the result reads as dialogue.
+
+    With no speaker labels, chunks are joined as plain paragraphs separated
+    by a blank line (matches the pre-diarization output).
+    """
     ordered = sorted(chunks, key=lambda c: c["index"])
-    parts: list[str] = []
+
+    label_map: dict[str, str] = {}
+    for c in ordered:
+        raw = c.get("speaker")
+        if raw and raw not in label_map:
+            label_map[raw] = f"Speaker {len(label_map) + 1}"
+
+    if not label_map:
+        return "\n\n".join(c["text"] for c in ordered if c.get("text"))
+
+    blocks: list[tuple[str | None, list[str]]] = []
     for c in ordered:
         text = c.get("text")
         if not text:
             continue
-        speaker = c.get("speaker")
-        parts.append(f"{speaker}: {text}" if speaker else text)
-    return "\n\n".join(parts)
+        label = label_map.get(c.get("speaker") or "")
+        if blocks and blocks[-1][0] == label:
+            blocks[-1][1].append(text)
+        else:
+            blocks.append((label, [text]))
+
+    return "\n\n".join(
+        f"{label}: {' '.join(texts)}" if label else " ".join(texts)
+        for label, texts in blocks
+    )
 
 
 # ----- Transcription dispatch -----
