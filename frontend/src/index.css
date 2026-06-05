@@ -348,6 +348,22 @@ body {
 }
 .config-select:disabled { opacity: 0.5; cursor: not-allowed; }
 
+.config-hint {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  letter-spacing: 0;
+  text-transform: none;
+  margin-left: 4px;
+}
+
+.trim-preview {
+  width: 100%;
+  margin: 4px 0 10px;
+  border-radius: var(--radius-sm);
+  background: var(--surface2);
+}
+
 .diarize-toggle {
   display: flex;
   align-items: flex-start;

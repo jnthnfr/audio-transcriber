@@ -52,6 +52,7 @@ export interface ResultResponse {
   backend: string
   model: string | null
   diarized: boolean
+  diarization_engine: string | null
 }
 
 export interface TranscriptionConfig {

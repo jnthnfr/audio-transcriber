@@ -21,6 +21,7 @@ from services.audio_processor import (
     format_chunk_label,
     probe_duration,
     split_to_chunks,
+    trim,
 )
 
 router = APIRouter()
@@ -46,6 +47,7 @@ def _new_job(job_id: str, total_chunks: int, backend: str, model: Optional[str])
         "backend": backend,
         "model": model,
         "diarized": False,
+        "diarization_engine": None,
     }
 
 
@@ -180,7 +182,12 @@ async def _apply_diarization(job_id: str, file_path: str) -> None:
     """
     from services import diarization_service
 
-    await _update_job(job_id, current_chunk_label="detecting speakers…")
+    engine = diarization_service.engine_name()
+    await _update_job(
+        job_id,
+        current_chunk_label=f"detecting speakers ({engine})…",
+        diarization_engine=engine,
+    )
     turns = await asyncio.to_thread(diarization_service.diarize, file_path)
 
     async with _jobs_lock:
@@ -257,6 +264,8 @@ async def transcribe(
     language: str = Form("auto"),
     whisper_model: str = Form("base"),
     diarize: bool = Form(False),
+    trim_start_seconds: float = Form(0.0),
+    trim_end_seconds: Optional[float] = Form(None),
 ):
     if backend == TranscriptionBackend.web_speech:
         raise HTTPException(
@@ -272,7 +281,10 @@ async def transcribe(
         if not diarization_service.is_available():
             raise HTTPException(
                 status_code=400,
-                detail="Speaker detection unavailable: set HF_TOKEN and accept the pyannote model license.",
+                detail=(
+                    "Speaker detection unavailable: set HF_TOKEN and accept the pyannote "
+                    "model license, or install resemblyzer for a no-token fallback."
+                ),
             )
 
     max_bytes = settings.max_upload_size_mb * 1024 * 1024
@@ -300,10 +312,30 @@ async def transcribe(
         raise
 
     try:
-        duration = probe_duration(file_path)
+        full_duration = probe_duration(file_path)
     except Exception as e:
         shutil.rmtree(job_dir, ignore_errors=True)
         raise HTTPException(status_code=422, detail=f"Could not read audio file: {e}")
+
+    # Optional trim: pre-clip the upload before chunking. Chunk timestamps in
+    # the resulting transcript are relative to the trimmed clip, not the source.
+    if trim_start_seconds > 0 or (trim_end_seconds is not None and trim_end_seconds < full_duration):
+        if trim_start_seconds >= full_duration:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            raise HTTPException(
+                status_code=400,
+                detail=f"trim_start_seconds ({trim_start_seconds}) is past end of file ({full_duration:.1f}s)",
+            )
+        clipped_end = min(trim_end_seconds, full_duration) if trim_end_seconds is not None else full_duration
+        trimmed_path = str(job_dir / f"trimmed{suffix}")
+        try:
+            duration = trim(file_path, trimmed_path, trim_start_seconds, clipped_end)
+        except Exception as e:
+            shutil.rmtree(job_dir, ignore_errors=True)
+            raise HTTPException(status_code=422, detail=f"Trim failed: {e}")
+        file_path = trimmed_path
+    else:
+        duration = full_duration
 
     chunk_dir = str(job_dir / "chunks")
     total_chunks = 1 if chunk_duration <= 0 else max(1, math.ceil(duration / chunk_duration))
@@ -367,6 +399,7 @@ async def get_result(job_id: str):
         backend=job["backend"],
         model=job["model"],
         diarized=job.get("diarized", False),
+        diarization_engine=job.get("diarization_engine"),
     )
 
 

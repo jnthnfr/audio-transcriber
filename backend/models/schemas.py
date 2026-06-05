@@ -59,6 +59,7 @@ class ResultResponse(BaseModel):
     backend: str
     model: Optional[str] = None
     diarized: bool = False
+    diarization_engine: Optional[str] = None
 
 
 class HealthResponse(BaseModel):

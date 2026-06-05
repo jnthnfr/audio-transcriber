@@ -9,12 +9,23 @@ import type {
 } from '../types'
 
 // In dev, the Vite proxy forwards /api → http://localhost:8000.
-// In production, VITE_API_BASE_URL points at the deployed backend (e.g. https://audio-transcriber-api.onrender.com).
+// In production, VITE_API_BASE_URL points at the deployed backend.
 const baseURL = import.meta.env.VITE_API_BASE_URL
   ? `${import.meta.env.VITE_API_BASE_URL.replace(/\/$/, '')}/api`
   : '/api'
 
 const api = axios.create({ baseURL })
+
+export interface StartTranscriptionParams {
+  file: File
+  backend: TranscriptionBackend
+  chunkDuration: number
+  language: string
+  whisperModel: WhisperModel
+  diarize: boolean
+  trimStartSeconds: number
+  trimEndSeconds: number | null
+}
 
 export const fetchHealth = async (): Promise<HealthResponse> => {
   const { data } = await api.get<HealthResponse>('/health')
@@ -22,21 +33,20 @@ export const fetchHealth = async (): Promise<HealthResponse> => {
 }
 
 export const startTranscription = async (
-  file: File,
-  backend: TranscriptionBackend,
-  chunkDuration: number,
-  language: string,
-  whisperModel: WhisperModel,
-  diarize: boolean,
+  params: StartTranscriptionParams,
   onUploadProgress?: (pct: number) => void,
 ): Promise<TranscribeResponse> => {
   const form = new FormData()
-  form.append('file', file)
-  form.append('backend', backend)
-  form.append('chunk_duration', String(chunkDuration))
-  form.append('language', language)
-  form.append('whisper_model', whisperModel)
-  form.append('diarize', String(diarize))
+  form.append('file', params.file)
+  form.append('backend', params.backend)
+  form.append('chunk_duration', String(params.chunkDuration))
+  form.append('language', params.language)
+  form.append('whisper_model', params.whisperModel)
+  form.append('diarize', String(params.diarize))
+  form.append('trim_start_seconds', String(params.trimStartSeconds))
+  if (params.trimEndSeconds != null) {
+    form.append('trim_end_seconds', String(params.trimEndSeconds))
+  }
 
   const { data } = await api.post<TranscribeResponse>('/transcribe', form, {
     headers: { 'Content-Type': 'multipart/form-data' },
