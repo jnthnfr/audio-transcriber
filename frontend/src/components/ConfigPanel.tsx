@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react'
 import { useTranscriptionStore } from '../store/transcriptionStore'
 import type { TranscriptionBackend, WhisperModel, HealthResponse } from '../types'
 
@@ -44,19 +45,39 @@ function isBackendAvailable(b: TranscriptionBackend, health: HealthResponse | nu
   }
 }
 
+function formatSeconds(s: number): string {
+  if (!isFinite(s) || s < 0) return '—'
+  const m = Math.floor(s / 60)
+  const sec = Math.floor(s % 60)
+  return `${m}:${sec.toString().padStart(2, '0')}`
+}
+
 export function ConfigPanel() {
   const {
+    file,
     backend, setBackend,
     chunkDuration, setChunkDuration,
     language, setLanguage,
     whisperModel, setWhisperModel,
     diarize, setDiarize,
+    trimStartSeconds, setTrimStartSeconds,
+    trimEndSeconds, setTrimEndSeconds,
     health, status,
   } = useTranscriptionStore()
 
   const isDisabled = status === 'processing' || status === 'queued'
   const diarizationAvailable = health?.diarization ?? false
   const diarizationSupportedForBackend = backend !== 'web_speech'
+
+  // Object URL for the preview player. Recreated when the file changes, revoked on unmount.
+  const fileUrl = useMemo(() => (file ? URL.createObjectURL(file) : null), [file])
+  useEffect(() => {
+    return () => { if (fileUrl) URL.revokeObjectURL(fileUrl) }
+  }, [fileUrl])
+
+  const [audioDuration, setAudioDuration] = useState<number | null>(null)
+  // Reset previewed duration when the file changes.
+  useEffect(() => { setAudioDuration(null) }, [file])
 
   return (
     <div className="config-panel">
@@ -137,12 +158,64 @@ export function ConfigPanel() {
         )}
       </div>
 
+      {/* Trim — only when a file is loaded */}
+      {file && fileUrl && (
+        <div className="config-section">
+          <label className="config-label">
+            Trim audio (optional)
+            {audioDuration !== null && (
+              <span className="config-hint"> · file is {formatSeconds(audioDuration)}</span>
+            )}
+          </label>
+          <audio
+            id="trim-preview"
+            className="trim-preview"
+            src={fileUrl}
+            controls
+            preload="metadata"
+            onLoadedMetadata={(e) => setAudioDuration(e.currentTarget.duration)}
+          />
+          <div className="config-row">
+            <div className="config-field">
+              <label htmlFor="trim-start" className="config-label">Start (seconds)</label>
+              <input
+                id="trim-start"
+                className="config-select"
+                type="number"
+                min={0}
+                step={0.1}
+                value={trimStartSeconds}
+                onChange={(e) => setTrimStartSeconds(Math.max(0, Number(e.target.value) || 0))}
+                disabled={isDisabled}
+              />
+            </div>
+            <div className="config-field">
+              <label htmlFor="trim-end" className="config-label">End (seconds)</label>
+              <input
+                id="trim-end"
+                className="config-select"
+                type="number"
+                min={0}
+                step={0.1}
+                value={trimEndSeconds ?? ''}
+                placeholder="end of file"
+                onChange={(e) => {
+                  const v = e.target.value
+                  setTrimEndSeconds(v === '' ? null : Math.max(0, Number(v) || 0))
+                }}
+                disabled={isDisabled}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Speaker detection */}
       {diarizationSupportedForBackend && (
         <div className="config-section">
           <label className="diarize-toggle" title={
             !diarizationAvailable
-              ? 'Unavailable — set HF_TOKEN on the backend and accept the pyannote license'
+              ? 'Unavailable — set HF_TOKEN on the backend and accept the pyannote license, or install resemblyzer for a no-token fallback'
               : 'Detect and label distinct speakers (adds ~0.5x audio length on CPU)'
           }>
             <input

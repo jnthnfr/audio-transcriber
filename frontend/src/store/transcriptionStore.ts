@@ -18,11 +18,15 @@ interface TranscriptionState {
   language: string
   whisperModel: WhisperModel
   diarize: boolean
+  trimStartSeconds: number
+  trimEndSeconds: number | null
   setBackend: (b: TranscriptionBackend) => void
   setChunkDuration: (d: number) => void
   setLanguage: (l: string) => void
   setWhisperModel: (m: WhisperModel) => void
   setDiarize: (d: boolean) => void
+  setTrimStartSeconds: (s: number) => void
+  setTrimEndSeconds: (s: number | null) => void
 
   // Job lifecycle
   jobId: string | null
@@ -41,6 +45,7 @@ interface TranscriptionState {
   resultBackend: string
   resultModel: string | null
   resultDiarized: boolean
+  resultDiarizationEngine: string | null
 
   // Health
   health: HealthResponse | null
@@ -63,6 +68,7 @@ interface TranscriptionState {
     backend: string,
     model: string | null,
     diarized: boolean,
+    diarizationEngine: string | null,
   ) => void
   setUploadProgress: (pct: number) => void
   setTranscript: (t: string) => void
@@ -85,6 +91,7 @@ const jobDefaults = {
   resultBackend: '',
   resultModel: null,
   resultDiarized: false,
+  resultDiarizationEngine: null,
 }
 
 const defaults = {
@@ -94,6 +101,8 @@ const defaults = {
   language: 'auto',
   whisperModel: 'base' as WhisperModel,
   diarize: false,
+  trimStartSeconds: 0,
+  trimEndSeconds: null,
   jobId: null,
   status: null,
   completedChunks: 0,
@@ -108,6 +117,7 @@ const defaults = {
   resultBackend: '',
   resultModel: null,
   resultDiarized: false,
+  resultDiarizationEngine: null,
   health: null,
 }
 
@@ -120,6 +130,8 @@ export const useTranscriptionStore = create<TranscriptionState>((set) => ({
   setLanguage: (language) => set({ language }),
   setWhisperModel: (whisperModel) => set({ whisperModel }),
   setDiarize: (diarize) => set({ diarize }),
+  setTrimStartSeconds: (trimStartSeconds) => set({ trimStartSeconds }),
+  setTrimEndSeconds: (trimEndSeconds) => set({ trimEndSeconds }),
   setHealth: (health) => set({ health }),
   setJobId: (jobId) => set({ jobId }),
   setUploadProgress: (uploadProgress) => set({ uploadProgress }),
@@ -128,8 +140,8 @@ export const useTranscriptionStore = create<TranscriptionState>((set) => ({
   setJobStatus: (status, completedChunks, totalChunks, progressPercent, currentChunkLabel, errorMessage) =>
     set({ status, completedChunks, totalChunks, progressPercent, currentChunkLabel, errorMessage }),
 
-  setResult: (transcript, chunks, durationSeconds, resultBackend, resultModel, resultDiarized) =>
-    set({ transcript, chunks, durationSeconds, resultBackend, resultModel, resultDiarized }),
+  setResult: (transcript, chunks, durationSeconds, resultBackend, resultModel, resultDiarized, resultDiarizationEngine) =>
+    set({ transcript, chunks, durationSeconds, resultBackend, resultModel, resultDiarized, resultDiarizationEngine }),
 
   resetJob: () => set({ ...jobDefaults }),
   reset: () => set({ ...defaults }),

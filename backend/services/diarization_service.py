@@ -1,24 +1,20 @@
-"""
-Speaker diarization via pyannote.audio.
+"""Speaker diarization facade.
 
-Diarization runs once per job on the full source audio (not per chunk) so
-speaker labels remain consistent across chunk boundaries. Callers intersect
-the returned speaker turns with their own chunk windows to label each chunk.
+Picks the best available engine and dispatches to it:
 
-Setup: requires a Hugging Face access token (HF_TOKEN) with the model
-license at https://huggingface.co/pyannote/speaker-diarization-3.1 accepted.
+  1. **pyannote** (`diarization_pyannote`) — high quality. Requires HF_TOKEN
+     and accepting the model license.
+  2. **resemblyzer** (`diarization_resemblyzer`) — lower quality but truly
+     local, zero-setup. No token, no license.
 
-The loaded pipeline is cached in-process so subsequent jobs skip the
-multi-second model load.
+Each engine module exposes `is_available()` and `diarize(audio_path)`. This
+module holds the shared `SpeakerTurn` type and the `dominant_speaker` helper
+that callers use to intersect speaker turns with their own chunk windows.
 """
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-
-from config import settings
-
-_pipeline = None
 
 
 @dataclass(frozen=True)
@@ -29,31 +25,38 @@ class SpeakerTurn:
     speaker: str
 
 
+# Engine name returned when no engine is available. Used in messages, not the API.
+ENGINE_NONE = "none"
+
+
 def is_available() -> bool:
-    """True iff pyannote is importable and an HF token is configured."""
-    if not settings.hf_token.strip():
-        return False
-    try:
-        import pyannote.audio  # noqa: F401
-    except ImportError:
-        return False
-    return True
+    """True iff any engine is configured and importable."""
+    return engine_name() != ENGINE_NONE
+
+
+def engine_name() -> str:
+    """Returns the name of the engine that would be used, or ENGINE_NONE."""
+    from services import diarization_pyannote, diarization_resemblyzer
+    if diarization_pyannote.is_available():
+        return "pyannote"
+    if diarization_resemblyzer.is_available():
+        return "resemblyzer"
+    return ENGINE_NONE
 
 
 def diarize(audio_path: str) -> list[SpeakerTurn]:
-    """Run diarization on a full audio file. Returns speaker turns ordered by start time."""
-    annotation = _pipeline_singleton()(audio_path)
-
-    turns = [
-        SpeakerTurn(
-            start=float(segment.start),
-            end=float(segment.end),
-            speaker=str(speaker),
-        )
-        for segment, _, speaker in annotation.itertracks(yield_label=True)
-    ]
-    turns.sort(key=lambda t: t.start)
-    return turns
+    """Run diarization with the best available engine."""
+    name = engine_name()
+    if name == "pyannote":
+        from services import diarization_pyannote
+        return diarization_pyannote.diarize(audio_path)
+    if name == "resemblyzer":
+        from services import diarization_resemblyzer
+        return diarization_resemblyzer.diarize(audio_path)
+    raise RuntimeError(
+        "No diarization engine available. Either set HF_TOKEN + accept the "
+        "pyannote license, or install resemblyzer."
+    )
 
 
 def dominant_speaker(turns: list[SpeakerTurn], start: float, end: float) -> str | None:
@@ -70,22 +73,3 @@ def dominant_speaker(turns: list[SpeakerTurn], start: float, end: float) -> str 
     if not totals:
         return None
     return max(totals, key=totals.get)
-
-
-def _pipeline_singleton():
-    global _pipeline
-    if _pipeline is not None:
-        return _pipeline
-
-    from pyannote.audio import Pipeline
-
-    _pipeline = Pipeline.from_pretrained(
-        settings.diarization_model,
-        use_auth_token=settings.hf_token,
-    )
-    if _pipeline is None:
-        raise RuntimeError(
-            f"Failed to load diarization pipeline '{settings.diarization_model}'. "
-            "Check that HF_TOKEN is valid and that the model license has been accepted."
-        )
-    return _pipeline

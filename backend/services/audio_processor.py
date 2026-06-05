@@ -41,6 +41,45 @@ def probe_duration(file_path: str) -> float:
     return float(json.loads(result.stdout)["format"]["duration"])
 
 
+def trim(input_path: str, out_path: str, start_sec: float, end_sec: float | None) -> float:
+    """Clip `input_path` to [start_sec, end_sec) and write to out_path.
+
+    Returns the duration of the trimmed clip in seconds. The output keeps the
+    source codec/format — re-encoding to wav happens later during chunk split.
+    """
+    if start_sec < 0:
+        raise ValueError("start_sec must be >= 0")
+    if end_sec is not None and end_sec <= start_sec:
+        raise ValueError("end_sec must be > start_sec")
+
+    cmd = [
+        "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+        "-ss", str(start_sec),
+        "-i", input_path,
+    ]
+    if end_sec is not None:
+        cmd += ["-to", str(end_sec - start_sec)]
+    cmd += ["-c", "copy", out_path]
+
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        # Stream-copy can fail if the codec doesn't allow mid-keyframe cuts.
+        # Fall back to re-encoding the clipped range.
+        fallback = [
+            "ffmpeg", "-y", "-hide_banner", "-loglevel", "error",
+            "-ss", str(start_sec),
+            "-i", input_path,
+        ]
+        if end_sec is not None:
+            fallback += ["-to", str(end_sec - start_sec)]
+        fallback += [out_path]
+        result = subprocess.run(fallback, capture_output=True, text=True)
+        if result.returncode != 0:
+            raise RuntimeError(f"ffmpeg trim failed: {result.stderr.strip()}")
+
+    return probe_duration(out_path)
+
+
 def _convert_full(input_path: str, out_path: str) -> None:
     result = subprocess.run(
         [

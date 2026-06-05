@@ -14,12 +14,16 @@ export function useTranscription() {
 
     try {
       const res = await startTranscription(
-        file,
-        s.backend,
-        s.chunkDuration,
-        s.language,
-        s.whisperModel,
-        s.diarize,
+        {
+          file,
+          backend: s.backend,
+          chunkDuration: s.chunkDuration,
+          language: s.language,
+          whisperModel: s.whisperModel,
+          diarize: s.diarize,
+          trimStartSeconds: s.trimStartSeconds,
+          trimEndSeconds: s.trimEndSeconds,
+        },
         (pct) => useTranscriptionStore.getState().setUploadProgress(pct),
       )
       const next = useTranscriptionStore.getState()

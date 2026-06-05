@@ -36,6 +36,7 @@ export function usePolling() {
             result.backend,
             result.model,
             result.diarized,
+            result.diarization_engine,
           )
           clearInterval(intervalRef.current!)
           intervalRef.current = null

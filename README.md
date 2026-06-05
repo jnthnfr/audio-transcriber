@@ -59,6 +59,16 @@ Copy `.env.example` to `.env` in the project root and fill in:
 | `HF_TOKEN` | Hugging Face token for speaker diarization (pyannote) |
 | `DIARIZATION_MODEL` | Diarization model id (default `pyannote/speaker-diarization-3.1`) |
 
+## Audio Trim (optional)
+
+Use the **Trim audio** section in the config panel to transcribe only a
+portion of the upload. A native audio player above the inputs lets you
+scrub to find the right timestamps; the start/end fields accept seconds
+(decimals OK). Leave **End** blank to run to the end of the file.
+
+The trim is applied with `ffmpeg` before chunking, so transcript chunk
+labels are relative to the trimmed clip rather than the original file.
+
 ## Transcription Backends
 
 | Backend | Notes |
@@ -72,9 +82,19 @@ Copy `.env.example` to `.env` in the project root and fill in:
 
 Toggle **Detect speakers** in the UI to label each segment with a speaker
 name (`Speaker 1`, `Speaker 2`, …). Diarization runs once on the full
-source file via `pyannote.audio` after transcription completes, assigns
-each chunk's dominant speaker, then formats the transcript as dialogue —
-consecutive turns by the same speaker are grouped under a single prefix.
+source file after transcription completes, assigns each chunk's dominant
+speaker, then formats the transcript as dialogue — consecutive turns by
+the same speaker are grouped under a single prefix.
+
+Two engines are supported, picked automatically in this order:
+
+| Engine | Quality | Setup |
+|--------|---------|-------|
+| **pyannote.audio** | Higher | Requires `HF_TOKEN` + accepting the model license |
+| **Resemblyzer** | Lower | Zero setup — installs with the requirements |
+
+The transcript header chip shows which engine was used (`pyannote` or
+`resemblyzer`).
 
 Example output:
 
@@ -86,11 +106,13 @@ Speaker 2: I'm fine, thanks. Anyway, let's begin.
 Speaker 1: Sounds good.
 ```
 
-Setup (one-time):
+Pyannote setup (one-time, optional):
 
 1. Create a free Hugging Face token at https://huggingface.co/settings/tokens
 2. Accept the model license at https://huggingface.co/pyannote/speaker-diarization-3.1
 3. Set `HF_TOKEN=hf_...` in `backend/.env` (or HF Space / Render secrets)
+
+If `HF_TOKEN` is unset, the backend falls back to Resemblyzer automatically.
 
 Notes:
 

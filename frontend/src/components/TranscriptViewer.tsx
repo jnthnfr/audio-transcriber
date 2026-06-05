@@ -7,7 +7,11 @@ function formatDuration(seconds: number): string {
 }
 
 export function TranscriptViewer() {
-  const { transcript, status, durationSeconds, resultBackend, resultModel, resultDiarized, chunks, setTranscript } = useTranscriptionStore()
+  const {
+    transcript, status, durationSeconds,
+    resultBackend, resultModel, resultDiarized, resultDiarizationEngine,
+    chunks, setTranscript,
+  } = useTranscriptionStore()
 
   if (!transcript && status !== 'processing') return null
 
@@ -28,7 +32,10 @@ export function TranscriptViewer() {
                resultBackend === 'google_cloud' ? 'Google Cloud STT' : 'Web Speech'}
             </span>
             {speakerCount > 0 && (
-              <span className="meta-chip">{speakerCount} speaker{speakerCount === 1 ? '' : 's'}</span>
+              <span className="meta-chip">
+                {speakerCount} speaker{speakerCount === 1 ? '' : 's'}
+                {resultDiarizationEngine ? ` · ${resultDiarizationEngine}` : ''}
+              </span>
             )}
           </div>
         )}
