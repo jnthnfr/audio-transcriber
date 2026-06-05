@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranscriptionStore } from '../store/transcriptionStore'
+import { TrimSlider } from './TrimSlider'
 import type { TranscriptionBackend, WhisperModel, HealthResponse } from '../types'
 
 const BACKENDS: { value: TranscriptionBackend; label: string; desc: string }[] = [
@@ -75,9 +76,20 @@ export function ConfigPanel() {
     return () => { if (fileUrl) URL.revokeObjectURL(fileUrl) }
   }, [fileUrl])
 
+  const audioRef = useRef<HTMLAudioElement>(null)
   const [audioDuration, setAudioDuration] = useState<number | null>(null)
-  // Reset previewed duration when the file changes.
-  useEffect(() => { setAudioDuration(null) }, [file])
+  // Reset previewed duration + trim range when the file changes.
+  useEffect(() => {
+    setAudioDuration(null)
+    setTrimStartSeconds(0)
+    setTrimEndSeconds(null)
+  }, [file, setTrimStartSeconds, setTrimEndSeconds])
+
+  const seekPreview = (seconds: number) => {
+    const audio = audioRef.current
+    if (!audio) return
+    audio.currentTime = Math.max(0, Math.min(audio.duration || seconds, seconds))
+  }
 
   return (
     <div className="config-panel">
@@ -169,44 +181,23 @@ export function ConfigPanel() {
           </label>
           <audio
             id="trim-preview"
+            ref={audioRef}
             className="trim-preview"
             src={fileUrl}
             controls
             preload="metadata"
             onLoadedMetadata={(e) => setAudioDuration(e.currentTarget.duration)}
           />
-          <div className="config-row">
-            <div className="config-field">
-              <label htmlFor="trim-start" className="config-label">Start (seconds)</label>
-              <input
-                id="trim-start"
-                className="config-select"
-                type="number"
-                min={0}
-                step={0.1}
-                value={trimStartSeconds}
-                onChange={(e) => setTrimStartSeconds(Math.max(0, Number(e.target.value) || 0))}
-                disabled={isDisabled}
-              />
-            </div>
-            <div className="config-field">
-              <label htmlFor="trim-end" className="config-label">End (seconds)</label>
-              <input
-                id="trim-end"
-                className="config-select"
-                type="number"
-                min={0}
-                step={0.1}
-                value={trimEndSeconds ?? ''}
-                placeholder="end of file"
-                onChange={(e) => {
-                  const v = e.target.value
-                  setTrimEndSeconds(v === '' ? null : Math.max(0, Number(v) || 0))
-                }}
-                disabled={isDisabled}
-              />
-            </div>
-          </div>
+          {audioDuration !== null && audioDuration > 0 && (
+            <TrimSlider
+              duration={audioDuration}
+              start={trimStartSeconds}
+              end={trimEndSeconds}
+              onChange={(s, e) => { setTrimStartSeconds(s); setTrimEndSeconds(e) }}
+              onPreviewSeek={seekPreview}
+              disabled={isDisabled}
+            />
+          )}
         </div>
       )}
 

@@ -62,12 +62,14 @@ Copy `.env.example` to `.env` in the project root and fill in:
 ## Audio Trim (optional)
 
 Use the **Trim audio** section in the config panel to transcribe only a
-portion of the upload. A native audio player above the inputs lets you
-scrub to find the right timestamps; the start/end fields accept seconds
-(decimals OK). Leave **End** blank to run to the end of the file.
+portion of the upload. A native audio player sits above a dual-handle
+slider — drag the start/end anchors to set the range. The preview audio
+scrubs to wherever you drag so you can hear the cut point. Keyboard:
+focus a handle and press ←/→ to nudge by 0.1 s (hold Shift for 1 s).
 
 The trim is applied with `ffmpeg` before chunking, so transcript chunk
 labels are relative to the trimmed clip rather than the original file.
+Drag the end handle all the way to the right to mean "end of file".
 
 ## Transcription Backends
 
