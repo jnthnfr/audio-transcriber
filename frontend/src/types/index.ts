@@ -6,7 +6,14 @@ export type TranscriptionBackend =
   | 'google_cloud'
   | 'web_speech'
 
-export type WhisperModel = 'tiny' | 'base' | 'small' | 'medium' | 'large'
+export type WhisperModel =
+  | 'tiny'
+  | 'base'
+  | 'small'
+  | 'medium'
+  | 'turbo'      // alias for large-v3-turbo: distilled large-v3, ~8x faster
+  | 'large'      // alias for large-v3 in current openai-whisper
+  | 'large-v3'   // pin the v3 weights explicitly
 
 export interface HealthResponse {
   status: string

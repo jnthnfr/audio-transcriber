@@ -53,7 +53,7 @@ Copy `.env.example` to `.env` in the project root and fill in:
 | `OPENAI_API_KEY` | Required for OpenAI Whisper API backend |
 | `GOOGLE_APPLICATION_CREDENTIALS` | Path to Google Cloud service account JSON |
 | `WHISPER_CACHE_DIR` | Where local Whisper models are cached |
-| `DEFAULT_WHISPER_MODEL` | `tiny` / `base` / `small` / `medium` / `large` |
+| `DEFAULT_WHISPER_MODEL` | `tiny` / `base` / `small` / `medium` / `turbo` / `large` / `large-v3` |
 | `MAX_UPLOAD_SIZE_MB` | Max upload size in megabytes |
 | `TEMP_DIR` | Directory for temporary job files |
 | `HF_TOKEN` | Hugging Face token for speaker diarization (pyannote) |

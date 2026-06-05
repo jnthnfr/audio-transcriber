@@ -11,11 +11,19 @@ class TranscriptionBackend(str, Enum):
 
 
 class WhisperModel(str, Enum):
+    """Model identifiers accepted by openai-whisper's `load_model()`.
+
+    `large` is an alias maintained by openai-whisper that currently points
+    at the large-v3 weights. `turbo` is an alias for `large-v3-turbo`, a
+    distilled large-v3 that runs ~8x faster with near-large quality.
+    """
     tiny = "tiny"
     base = "base"
     small = "small"
     medium = "medium"
+    turbo = "turbo"
     large = "large"
+    large_v3 = "large-v3"
 
 
 class JobStatus(str, Enum):
