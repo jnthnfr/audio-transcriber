@@ -17,7 +17,17 @@ const CHUNK_OPTIONS = [
   { value: 300, label: '5 minutes' },
 ]
 
-const WHISPER_MODELS: WhisperModel[] = ['tiny', 'base', 'small', 'medium', 'large']
+// Ordered roughly from fastest to most accurate. `large` and `large-v3` use the
+// same weights today; `large-v3` is exposed so users can pin the version.
+const WHISPER_MODELS: { value: WhisperModel; hint: string }[] = [
+  { value: 'tiny',     hint: '~39M params · fastest, lowest accuracy' },
+  { value: 'base',     hint: '~74M params' },
+  { value: 'small',    hint: '~244M params' },
+  { value: 'medium',   hint: '~769M params' },
+  { value: 'turbo',    hint: '~809M params · distilled large-v3, ~8x faster than large' },
+  { value: 'large',    hint: '~1550M params · alias for large-v3' },
+  { value: 'large-v3', hint: '~1550M params · pinned to v3 weights' },
+]
 
 const LANGUAGES = [
   { value: 'auto', label: 'Auto-detect' },
@@ -151,7 +161,7 @@ export function ConfigPanel() {
               disabled={isDisabled}
             >
               {WHISPER_MODELS.map((m) => (
-                <option key={m} value={m}>{m}</option>
+                <option key={m.value} value={m.value} title={m.hint}>{m.value}</option>
               ))}
             </select>
           </div>
